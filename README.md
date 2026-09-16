@@ -53,28 +53,54 @@ Three rules keep the record honest:
 
 ## Install
 
+### Docker (recommended)
+
+```bash
+git clone https://github.com/Jduckworp/daybook.git
+cd daybook
+docker compose up -d
+docker compose logs | grep -A2 "first boot"
+```
+
+Open <http://localhost:8765> and sign in with the password from that log line.
+It is generated on first boot and also written to `config.json` on the volume.
+Change it once you are in (see below).
+
+The database and the password both live on the `daybook-data` volume, so
+`docker compose down` and a rebuild lose nothing. Back it up by copying
+`daybook.db` out of the volume:
+
+```bash
+docker cp daybook:/data/daybook.db ./daybook-backup.db
+```
+
+### Without Docker
+
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/YOURNAME/daybook.git
+git clone https://github.com/Jduckworp/daybook.git
 cd daybook
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 DAYBOOK_INSECURE_COOKIE=1 .venv/bin/python app.py
 ```
 
-Open <http://127.0.0.1:8765>. On first boot Daybook writes a `config.json`
-containing a fresh session key, a salt, and a **randomly generated password
-which it prints to the console**. Sign in with that, then change it (below).
-
-`DAYBOOK_INSECURE_COOKIE=1` is needed only because you are on plain HTTP.
-Drop it the moment there is TLS in front.
+Same first-boot behaviour: the generated password is printed to the console
+and written to `config.json`.
 
 ## Deploy
 
-`deploy/` has a systemd unit and an nginx server block to copy and edit.
-The short version: run it under gunicorn bound to `127.0.0.1`, put nginx in
-front to terminate TLS, and let the session cookie stay `Secure`.
+`deploy/` has a systemd unit and an nginx server block to copy and edit, for
+running it directly rather than in a container. Either way the shape is the
+same: bind it to localhost, put a reverse proxy in front to terminate TLS,
+and let the session cookie stay `Secure`.
+
+**If you are using Docker, delete the `DAYBOOK_INSECURE_COOKIE` line from
+`compose.yaml` once TLS is in front.** It ships set so that a first run on a
+LAN address works at all — without it the browser refuses to send the cookie
+back over plain HTTP and you appear signed out on every request. Daybook says
+so in its log on every boot while that flag is on.
 
 ```bash
 sudo cp deploy/daybook.service /etc/systemd/system/
@@ -93,14 +119,31 @@ minute, and the wait doubles with each further attempt up to an hour.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DAYBOOK_DATA_DIR` | `./data` | Where `daybook.db` lives |
-| `DAYBOOK_CONFIG` | `./config.json` | Session key, salt, password hash |
+| `DAYBOOK_DATA_DIR` | `./data` (`/data` in Docker) | Where `daybook.db` lives |
+| `DAYBOOK_CONFIG` | `./config.json` (`/data/config.json` in Docker) | Session key, salt, password hash |
 | `DAYBOOK_INSECURE_COOKIE` | unset | Set to `1` to allow the session cookie over plain HTTP |
 
 `config.json` is written mode 600 and must stay out of version control —
 it is in `.gitignore` already.
 
 ### Changing the password
+
+In Docker:
+
+```bash
+docker compose exec daybook python -c "
+import json, pathlib
+from app import hash_password
+f = pathlib.Path('/data/config.json')
+cfg = json.loads(f.read_text())
+cfg['password_hash'] = hash_password('YOUR NEW PASSWORD', cfg['salt'])
+cfg.pop('initial_password', None)
+f.write_text(json.dumps(cfg, indent=2))
+"
+docker compose restart daybook
+```
+
+Running it directly:
 
 ```bash
 .venv/bin/python - <<'PY'
@@ -128,6 +171,9 @@ sqlite3 data/daybook.db \
    WHERE done = 1 AND completed_at LIKE '2026-09%'
    ORDER BY completed_at;"
 ```
+
+In Docker the same file is at `/data/daybook.db` inside the container, or copy
+it out with `docker cp daybook:/data/daybook.db .` and query it locally.
 
 | column | meaning |
 |---|---|

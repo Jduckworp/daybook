@@ -75,30 +75,47 @@ def hash_password(password: str, salt: str) -> str:
 
 
 def load_config() -> dict:
-    """Read config.json, minting a fresh secret + password on first boot."""
-    if CONFIG_PATH.exists():
-        return json.loads(CONFIG_PATH.read_text())
-    salt = secrets.token_hex(16)
-    password = secrets.token_urlsafe(9)
-    cfg = {
-        "secret_key": secrets.token_hex(32),
-        "salt": salt,
-        "password_hash": hash_password(password, salt),
-        "initial_password": password,  # delete this line once you've saved it
-    }
-    CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
-    CONFIG_PATH.chmod(0o600)
-    # Under systemd this goes to the journal, which is the only place a first
-    # boot leaves any trace; without it the only copy is inside config.json
-    # and a new user has no idea to look there.
-    print(
-        "\n  Daybook — first boot.\n"
-        f"  Your password is:  {password}\n"
-        f"  It is also in {CONFIG_PATH}. Change it, then delete the\n"
-        "  \"initial_password\" line from that file.\n",
-        flush=True,
-    )
-    return cfg
+    """Read config.json, minting a fresh secret + password on first boot.
+
+    Every worker runs this at import. On a first boot they race, and before
+    this was made exclusive they each minted a *different* password: the file
+    held one worker's, while the other kept its own in memory and rejected the
+    password the user had just been told. O_EXCL makes exactly one of them the
+    author; the rest wait for it to finish writing and read what it wrote.
+    """
+    for _ in range(100):
+        if CONFIG_PATH.exists():
+            try:
+                return json.loads(CONFIG_PATH.read_text())
+            except (json.JSONDecodeError, ValueError):
+                time.sleep(0.05)  # the winner is mid-write; let it finish
+                continue
+        try:
+            fd = os.open(CONFIG_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            continue  # lost the race; go round and read theirs
+        salt = secrets.token_hex(16)
+        password = secrets.token_urlsafe(9)
+        cfg = {
+            "secret_key": secrets.token_hex(32),
+            "salt": salt,
+            "password_hash": hash_password(password, salt),
+            "initial_password": password,  # delete this line once you've saved it
+        }
+        with os.fdopen(fd, "w") as fh:
+            fh.write(json.dumps(cfg, indent=2) + "\n")
+        # Under systemd or Docker this goes to the log, which is the only place
+        # a first boot leaves any trace; without it the only copy is inside
+        # config.json and a new user has no reason to look there.
+        print(
+            "\n  Daybook — first boot.\n"
+            f"  Your password is:  {password}\n"
+            f"  It is also in {CONFIG_PATH}. Change it, then delete the\n"
+            '  "initial_password" line from that file.\n',
+            flush=True,
+        )
+        return cfg
+    raise RuntimeError(f"Could not read or create {CONFIG_PATH}")
 
 
 CONFIG = load_config()
@@ -117,6 +134,16 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=180),
     JSON_SORT_KEYS=False,
 )
+
+if not app.config["SESSION_COOKIE_SECURE"]:
+    # Easy to set once to get a first run working and then forget about, so
+    # say it on every boot rather than only in the documentation.
+    print(
+        "  Daybook: DAYBOOK_INSECURE_COOKIE is set. The session cookie will\n"
+        "  travel in clear text. Fine on localhost or a trusted LAN; remove it\n"
+        "  once something is terminating TLS in front of this.",
+        flush=True,
+    )
 
 
 # --------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.venv/
+data/
+config.json
+__pycache__/
+*.pyc
+docs/
+deploy/
+tools/
+README.md
+LICENSE
+Dockerfile
+compose.yaml
