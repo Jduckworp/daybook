@@ -1,4 +1,4 @@
-/* Daybook — board + record.
+/* Donebook — board + record.
    One in-memory task list drives every view; the server is the record. */
 
 (() => {
@@ -82,7 +82,7 @@
       throw new Error("unauthorized");
     }
     // The service worker stamps anything it served from its own cache.
-    setOffline(res.headers.get("X-Daybook-Cache") === "hit");
+    setOffline(res.headers.get("X-Donebook-Cache") === "hit");
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;

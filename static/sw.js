@@ -1,12 +1,12 @@
-/* Daybook — service worker.
+/* Donebook — service worker.
 
    Two jobs: make the board installable as a home-screen app, and keep it
    readable with no connection. Reading works offline; writing does not, and
    the app says so rather than pretending a change was saved. */
 
 const VERSION = "v1";
-const SHELL = `tasks-shell-${VERSION}`;
-const DATA = `tasks-data-${VERSION}`;
+const SHELL = `donebook-shell-${VERSION}`;
+const DATA = `donebook-data-${VERSION}`;
 
 // Only the page itself. The stylesheet and script are requested with an ?v=
 // stamp that changes whenever they do, so precaching the bare URL would cache
@@ -50,7 +50,7 @@ self.addEventListener("message", (event) => {
 /** Re-issue a cached response with a marker the page can read. */
 async function tagAsCached(response) {
   const headers = new Headers(response.headers);
-  headers.set("X-Daybook-Cache", "hit");
+  headers.set("X-Donebook-Cache", "hit");
   return new Response(await response.blob(), {
     status: response.status,
     statusText: response.statusText,

@@ -1,4 +1,4 @@
-"""Daybook — a task board that keeps a record of what you actually did.
+"""Donebook — a task board that keeps a record of what you actually did.
 
 A single-user work tracker: schedule tasks onto days, drag them around, tick
 them off. Unlike most todo apps, nothing ticked off is ever thrown away — the
@@ -36,10 +36,10 @@ from flask import (
 )
 
 BASE = Path(__file__).resolve().parent
-DATA = Path(os.environ.get("DAYBOOK_DATA_DIR") or BASE / "data")
+DATA = Path(os.environ.get("DONEBOOK_DATA_DIR") or BASE / "data")
 DATA.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA / "daybook.db"
-CONFIG_PATH = Path(os.environ.get("DAYBOOK_CONFIG") or BASE / "config.json")
+DB_PATH = DATA / "donebook.db"
+CONFIG_PATH = Path(os.environ.get("DONEBOOK_CONFIG") or BASE / "config.json")
 
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
@@ -108,7 +108,7 @@ def load_config() -> dict:
         # a first boot leaves any trace; without it the only copy is inside
         # config.json and a new user has no reason to look there.
         print(
-            "\n  Daybook — first boot.\n"
+            "\n  Donebook — first boot.\n"
             f"  Your password is:  {password}\n"
             f"  It is also in {CONFIG_PATH}. Change it, then delete the\n"
             '  "initial_password" line from that file.\n',
@@ -127,10 +127,10 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     # On by default: anything reachable from outside your own machine should
     # be behind TLS, and a session cookie that travels in clear text is worth
-    # stealing. Set DAYBOOK_INSECURE_COOKIE=1 when testing over plain HTTP,
+    # stealing. Set DONEBOOK_INSECURE_COOKIE=1 when testing over plain HTTP,
     # otherwise the browser will refuse to send the cookie back and you will
     # appear to be signed out on every request.
-    SESSION_COOKIE_SECURE=os.environ.get("DAYBOOK_INSECURE_COOKIE") != "1",
+    SESSION_COOKIE_SECURE=os.environ.get("DONEBOOK_INSECURE_COOKIE") != "1",
     PERMANENT_SESSION_LIFETIME=timedelta(days=180),
     JSON_SORT_KEYS=False,
 )
@@ -139,7 +139,7 @@ if not app.config["SESSION_COOKIE_SECURE"]:
     # Easy to set once to get a first run working and then forget about, so
     # say it on every boot rather than only in the documentation.
     print(
-        "  Daybook: DAYBOOK_INSECURE_COOKIE is set. The session cookie will\n"
+        "  Donebook: DONEBOOK_INSECURE_COOKIE is set. The session cookie will\n"
         "  travel in clear text. Fine on localhost or a trusted LAN; remove it\n"
         "  once something is terminating TLS in front of this.",
         flush=True,

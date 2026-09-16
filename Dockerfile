@@ -3,8 +3,8 @@ FROM python:3.12-slim
 # Nothing here is compiled, so the slim image needs no build toolchain.
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    DAYBOOK_DATA_DIR=/data \
-    DAYBOOK_CONFIG=/data/config.json
+    DONEBOOK_DATA_DIR=/data \
+    DONEBOOK_CONFIG=/data/config.json
 
 WORKDIR /app
 
@@ -19,10 +19,10 @@ COPY static/ ./static/
 # the container never loses the record and never regenerates the password.
 # Creating /data in the image with the right owner is what lets a named
 # volume inherit that ownership on first use.
-RUN useradd --system --uid 1000 --create-home daybook \
+RUN useradd --system --uid 1000 --create-home donebook \
  && mkdir -p /data \
- && chown -R daybook:daybook /data /app
-USER daybook
+ && chown -R donebook:donebook /data /app
+USER donebook
 
 VOLUME ["/data"]
 EXPOSE 8765

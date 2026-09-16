@@ -1,8 +1,8 @@
-# Daybook
+# Donebook
 
 A task board that keeps the record.
 
-![The Daybook board — a month of work, with everything already ticked off still on the board](docs/screenshot.png)
+![The Donebook board — a month of work, with everything already ticked off still on the board](docs/screenshot.png)
 
 Schedule tasks onto days, drag them around, tick them off. The difference
 from every other todo app is what happens next: **nothing you finish is ever
@@ -22,7 +22,7 @@ open. That is fine if a todo list is all you want. It is useless if you also
 need to answer "what did I do in September?", which for a lot of people comes
 round every month.
 
-Daybook treats the completed task as the point. Ticking something is not
+Donebook treats the completed task as the point. Ticking something is not
 deletion, it is a dated entry in a record that you can read back, export and
 hand to somebody.
 
@@ -56,8 +56,8 @@ Three rules keep the record honest:
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/Jduckworp/daybook.git
-cd daybook
+git clone https://github.com/Jduckworp/donebook.git
+cd donebook
 docker compose up -d
 docker compose logs | grep -A2 "first boot"
 ```
@@ -66,12 +66,12 @@ Open <http://localhost:8765> and sign in with the password from that log line.
 It is generated on first boot and also written to `config.json` on the volume.
 Change it once you are in (see below).
 
-The database and the password both live on the `daybook-data` volume, so
+The database and the password both live on the `donebook-data` volume, so
 `docker compose down` and a rebuild lose nothing. Back it up by copying
-`daybook.db` out of the volume:
+`donebook.db` out of the volume:
 
 ```bash
-docker cp daybook:/data/daybook.db ./daybook-backup.db
+docker cp donebook:/data/donebook.db ./donebook-backup.db
 ```
 
 ### Without Docker
@@ -79,11 +79,11 @@ docker cp daybook:/data/daybook.db ./daybook-backup.db
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/Jduckworp/daybook.git
-cd daybook
+git clone https://github.com/Jduckworp/donebook.git
+cd donebook
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-DAYBOOK_INSECURE_COOKIE=1 .venv/bin/python app.py
+DONEBOOK_INSECURE_COOKIE=1 .venv/bin/python app.py
 ```
 
 Same first-boot behaviour: the generated password is printed to the console
@@ -96,18 +96,18 @@ running it directly rather than in a container. Either way the shape is the
 same: bind it to localhost, put a reverse proxy in front to terminate TLS,
 and let the session cookie stay `Secure`.
 
-**If you are using Docker, delete the `DAYBOOK_INSECURE_COOKIE` line from
+**If you are using Docker, delete the `DONEBOOK_INSECURE_COOKIE` line from
 `compose.yaml` once TLS is in front.** It ships set so that a first run on a
 LAN address works at all — without it the browser refuses to send the cookie
-back over plain HTTP and you appear signed out on every request. Daybook says
+back over plain HTTP and you appear signed out on every request. Donebook says
 so in its log on every boot while that flag is on.
 
 ```bash
-sudo cp deploy/daybook.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now daybook
+sudo cp deploy/donebook.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now donebook
 ```
 
-Daybook has **one password and no user accounts**. Do not put it on a public
+Donebook has **one password and no user accounts**. Do not put it on a public
 hostname without TLS, and think twice before putting it on a public hostname
 at all — a private network or a VPN such as Tailscale is a better fit for
 what this is.
@@ -119,9 +119,9 @@ minute, and the wait doubles with each further attempt up to an hour.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DAYBOOK_DATA_DIR` | `./data` (`/data` in Docker) | Where `daybook.db` lives |
-| `DAYBOOK_CONFIG` | `./config.json` (`/data/config.json` in Docker) | Session key, salt, password hash |
-| `DAYBOOK_INSECURE_COOKIE` | unset | Set to `1` to allow the session cookie over plain HTTP |
+| `DONEBOOK_DATA_DIR` | `./data` (`/data` in Docker) | Where `donebook.db` lives |
+| `DONEBOOK_CONFIG` | `./config.json` (`/data/config.json` in Docker) | Session key, salt, password hash |
+| `DONEBOOK_INSECURE_COOKIE` | unset | Set to `1` to allow the session cookie over plain HTTP |
 
 `config.json` is written mode 600 and must stay out of version control —
 it is in `.gitignore` already.
@@ -131,7 +131,7 @@ it is in `.gitignore` already.
 In Docker:
 
 ```bash
-docker compose exec daybook python -c "
+docker compose exec donebook python -c "
 import json, pathlib
 from app import hash_password
 f = pathlib.Path('/data/config.json')
@@ -140,7 +140,7 @@ cfg['password_hash'] = hash_password('YOUR NEW PASSWORD', cfg['salt'])
 cfg.pop('initial_password', None)
 f.write_text(json.dumps(cfg, indent=2))
 "
-docker compose restart daybook
+docker compose restart donebook
 ```
 
 Running it directly:
@@ -154,7 +154,7 @@ cfg["password_hash"] = hash_password("YOUR NEW PASSWORD", cfg["salt"])
 cfg.pop("initial_password", None)
 pathlib.Path("config.json").write_text(json.dumps(cfg, indent=2) + "\n")
 PY
-sudo systemctl restart daybook
+sudo systemctl restart donebook
 ```
 
 Existing sessions survive, because they are signed with `secret_key`, not the
@@ -166,14 +166,14 @@ One SQLite table, no ORM, no migrations framework. Read the record without
 the app whenever you like:
 
 ```bash
-sqlite3 data/daybook.db \
+sqlite3 data/donebook.db \
   "SELECT completed_at, strand, title, notes FROM tasks
    WHERE done = 1 AND completed_at LIKE '2026-09%'
    ORDER BY completed_at;"
 ```
 
-In Docker the same file is at `/data/daybook.db` inside the container, or copy
-it out with `docker cp daybook:/data/daybook.db .` and query it locally.
+In Docker the same file is at `/data/donebook.db` inside the container, or copy
+it out with `docker cp donebook:/data/donebook.db .` and query it locally.
 
 | column | meaning |
 |---|---|

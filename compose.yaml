@@ -1,25 +1,25 @@
-name: daybook
+name: donebook
 
 services:
-  daybook:
+  donebook:
     build: .
     # Or, once images are published:
-    # image: ghcr.io/YOURNAME/daybook:latest
-    container_name: daybook
+    # image: ghcr.io/YOURNAME/donebook:latest
+    container_name: donebook
     restart: unless-stopped
     ports:
       - "8765:8765"
     volumes:
-      - daybook-data:/data
+      - donebook-data:/data
     environment:
-      # Daybook keeps the session cookie Secure by default, which means the
+      # Donebook keeps the session cookie Secure by default, which means the
       # browser will only send it back over HTTPS. On a LAN address with no
       # TLS that looks like being signed out on every request, so this is on
       # here to make a first run work.
       #
       # DELETE THIS LINE once you have a reverse proxy terminating TLS.
-      DAYBOOK_INSECURE_COOKIE: "1"
+      DONEBOOK_INSECURE_COOKIE: "1"
       TZ: UTC
 
 volumes:
-  daybook-data:
+  donebook-data:

@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Daybook",
-  "short_name": "Daybook",
+  "name": "Donebook",
+  "short_name": "Donebook",
   "description": "A record of what you actually did.",
   "start_url": "/",
   "scope": "/",

@@ -1,19 +1,19 @@
-# systemd unit for Daybook. Copy to /etc/systemd/system/daybook.service,
+# systemd unit for Donebook. Copy to /etc/systemd/system/donebook.service,
 # edit the three paths and the user, then:
 #
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now daybook
+#   sudo systemctl enable --now donebook
 #
 [Unit]
-Description=Daybook — a task board that keeps the record
+Description=Donebook — a task board that keeps the record
 After=network.target
 
 [Service]
 Type=simple
 User=CHANGEME
 Group=CHANGEME
-WorkingDirectory=/srv/daybook
-ExecStart=/srv/daybook/.venv/bin/gunicorn \
+WorkingDirectory=/srv/donebook
+ExecStart=/srv/donebook/.venv/bin/gunicorn \
     --workers 2 --threads 4 --timeout 60 \
     --bind 127.0.0.1:8765 \
     --access-logfile - --error-logfile - \
@@ -23,7 +23,7 @@ RestartSec=3
 
 # Set this only while testing over plain HTTP. In any real deployment the
 # reverse proxy terminates TLS and the session cookie must stay secure.
-# Environment=DAYBOOK_INSECURE_COOKIE=1
+# Environment=DONEBOOK_INSECURE_COOKIE=1
 
 [Install]
 WantedBy=multi-user.target
