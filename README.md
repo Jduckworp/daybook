@@ -2,6 +2,8 @@
 
 A task board that keeps the record.
 
+![The Daybook board — a month of work, with everything already ticked off still on the board](docs/screenshot.png)
+
 Schedule tasks onto days, drag them around, tick them off. The difference
 from every other todo app is what happens next: **nothing you finish is ever
 thrown away.** At the end of the month you can export exactly what got done,
