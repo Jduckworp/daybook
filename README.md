@@ -2,6 +2,8 @@
 
 A task board that keeps the record.
 
+**[Try the demo →](https://donebook.crmckgsb.com)** (password `demo`; it is a shared sandbox and wipes hourly)
+
 [![Release](https://img.shields.io/github/v/release/Jduckworp/donebook?label=release)](https://github.com/Jduckworp/donebook/releases/latest)
 [![Docker pulls](https://img.shields.io/docker/pulls/jduckworp/donebook)](https://hub.docker.com/r/jduckworp/donebook)
 [![Image size](https://img.shields.io/docker/image-size/jduckworp/donebook/latest)](https://hub.docker.com/r/jduckworp/donebook)
