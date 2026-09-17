@@ -219,42 +219,93 @@ def require_auth(fn):
     return wrapper
 
 
-# One password guards the whole instance, so a guessing attack is the only
-# way in. PBKDF2 at 240k rounds already makes each attempt expensive, but a
-# patient script still gets unlimited tries; this caps them. The counter is
-# global rather than per-IP on purpose — there is only ever one legitimate
-# user, so locking everyone out is exactly the right response, and it cannot
-# be sidestepped by rotating through addresses. The counter lives in the
-# process, so N gunicorn workers allow N times the attempts before the
-# first lockout — still a hard ceiling, just a slightly higher one.
-LOCKOUT_AFTER = 5          # failures before the door closes
+# One password guards the whole instance, so a guessing attack is the only way
+# in. PBKDF2 at 240k rounds already makes each attempt expensive, but a patient
+# script still gets unlimited tries; this caps them.
+#
+# The counter is PER CLIENT ADDRESS. It used to be global, on the reasoning
+# that there is only one legitimate user so locking everyone out is the right
+# response. That reasoning holds on a private network and fails completely on a
+# public hostname: issuing a TLS certificate publishes the name to Certificate
+# Transparency logs, scanners read those logs and probe new hosts within
+# seconds, and a global counter hands any one of them a trivial way to keep the
+# real user locked out for an hour. Observed in the wild, not theorised — a new
+# board collected five failed logins from four different sources inside ninety
+# seconds of its certificate being issued.
+#
+# Per-address state can be grown without bound by an attacker rotating
+# addresses, so entries are pruned on every write and the table is capped.
+# nginx does per-address rate limiting in front of this as well, which is what
+# actually stops the PBKDF2 cost being a CPU exhaustion vector; this layer is
+# what keeps one noisy address from locking out everyone else.
+LOCKOUT_AFTER = 5          # failures, per address, before the door closes
 LOCKOUT_WINDOW = 15 * 60   # seconds a failure is remembered for
 LOCKOUT_SECONDS = 60       # doubles with each further failure, up to an hour
+_MAX_TRACKED = 4096        # ceiling on the per-address table
 
 _auth_lock = threading.Lock()
-_auth_state = {"failures": [], "locked_until": 0.0}
+_auth_state: dict[str, dict] = {}
+
+
+def _client_key() -> str:
+    """Identify the caller for rate limiting.
+
+    Behind the reverse proxy the peer is always the proxy, so the real address
+    comes from X-Forwarded-For — specifically its LAST entry, which is the one
+    the proxy appended itself and is therefore the only one a client cannot
+    forge. Set DONEBOOK_TRUSTED_PROXY=1 when something is in front; leaving it
+    unset means the header is ignored, because trusting it when nothing
+    overwrites it would let anyone claim any address.
+    """
+    if os.environ.get("DONEBOOK_TRUSTED_PROXY"):
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.rsplit(",", 1)[-1].strip()
+    return request.remote_addr or "-"
+
+
+def _prune(now: float) -> None:
+    """Drop addresses with nothing recent to remember. Caller holds the lock."""
+    for key, st in list(_auth_state.items()):
+        if not st["failures"] and st["locked_until"] < now:
+            del _auth_state[key]
+        elif st["failures"] and now - st["failures"][-1] > LOCKOUT_WINDOW \
+                and st["locked_until"] < now:
+            del _auth_state[key]
 
 
 def _lockout_remaining() -> int:
-    """Seconds left on the lockout, 0 if the door is open."""
+    """Seconds left on this caller's lockout, 0 if the door is open."""
+    key = _client_key()
     with _auth_lock:
-        return max(0, int(_auth_state["locked_until"] - time.monotonic()))
+        st = _auth_state.get(key)
+        if not st:
+            return 0
+        return max(0, int(st["locked_until"] - time.monotonic()))
 
 
 def _note_auth(success: bool) -> None:
+    key = _client_key()
     now = time.monotonic()
     with _auth_lock:
         if success:
-            _auth_state["failures"].clear()
-            _auth_state["locked_until"] = 0.0
+            _auth_state.pop(key, None)
             return
-        recent = [t for t in _auth_state["failures"] if now - t < LOCKOUT_WINDOW]
+        _prune(now)
+        if key not in _auth_state and len(_auth_state) >= _MAX_TRACKED:
+            # Table is full of attackers. Refusing to add a new entry would
+            # mean not limiting them at all, so evict the coldest instead.
+            coldest = min(_auth_state, key=lambda k: _auth_state[k]["last"])
+            del _auth_state[coldest]
+        st = _auth_state.setdefault(key, {"failures": [], "locked_until": 0.0, "last": now})
+        st["last"] = now
+        recent = [t for t in st["failures"] if now - t < LOCKOUT_WINDOW]
         recent.append(now)
-        _auth_state["failures"] = recent
+        st["failures"] = recent
         if len(recent) >= LOCKOUT_AFTER:
             over = len(recent) - LOCKOUT_AFTER
             wait = min(LOCKOUT_SECONDS * (2 ** over), 3600)
-            _auth_state["locked_until"] = now + wait
+            st["locked_until"] = now + wait
 
 
 @app.post("/api/login")
