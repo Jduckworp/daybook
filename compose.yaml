@@ -2,9 +2,8 @@ name: donebook
 
 services:
   donebook:
-    build: .
-    # Or, once images are published:
-    # image: ghcr.io/YOURNAME/donebook:latest
+    image: jduckworp/donebook:1
+    # Working on Donebook itself? Swap the line above for `build: .`
     container_name: donebook
     restart: unless-stopped
     ports:

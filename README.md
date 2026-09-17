@@ -2,6 +2,11 @@
 
 A task board that keeps the record.
 
+[![Docker image](https://img.shields.io/docker/v/jduckworp/donebook?label=docker&sort=semver)](https://hub.docker.com/r/jduckworp/donebook)
+[![Docker pulls](https://img.shields.io/docker/pulls/jduckworp/donebook)](https://hub.docker.com/r/jduckworp/donebook)
+[![Image size](https://img.shields.io/docker/image-size/jduckworp/donebook/latest)](https://hub.docker.com/r/jduckworp/donebook)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 ![The Donebook board — a month of work, with everything already ticked off still on the board](docs/screenshot.png)
 
 Schedule tasks onto days, drag them around, tick them off. The difference
@@ -55,19 +60,31 @@ Three rules keep the record honest:
 
 ### Docker (recommended)
 
+Published for `linux/amd64` and `linux/arm64`, so this works on a Raspberry Pi
+and an Apple Silicon Mac as well as an x86 server. Nothing to clone:
+
 ```bash
-git clone https://github.com/Jduckworp/donebook.git
-cd donebook
-docker compose up -d
-docker compose logs | grep -A2 "first boot"
+docker run -d --name donebook \
+  -p 8765:8765 \
+  -v donebook-data:/data \
+  -e DONEBOOK_INSECURE_COOKIE=1 \
+  jduckworp/donebook:1
+
+docker logs donebook | grep -A2 "first boot"
 ```
+
+Or with Compose — copy [`compose.yaml`](compose.yaml) and run `docker compose
+up -d`, then `docker compose logs | grep -A2 "first boot"`.
 
 Open <http://localhost:8765> and sign in with the password from that log line.
 It is generated on first boot and also written to `config.json` on the volume.
 Change it once you are in (see below).
 
+Tags: `1` tracks the latest 1.x, `1.0.0` pins an exact build, `latest` is
+whatever is newest. Pin the major at least.
+
 The database and the password both live on the `donebook-data` volume, so
-`docker compose down` and a rebuild lose nothing. Back it up by copying
+`docker compose down` and an upgrade lose nothing. Back it up by copying
 `donebook.db` out of the volume:
 
 ```bash
