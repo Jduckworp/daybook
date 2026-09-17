@@ -17,7 +17,7 @@ ExecStart=/srv/donebook/.venv/bin/gunicorn \
     --workers 2 --threads 4 --timeout 60 \
     --bind 127.0.0.1:8765 \
     --access-logfile - --error-logfile - \
-    app:app
+    donebook.app:app
 Restart=always
 RestartSec=3
 

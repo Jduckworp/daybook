@@ -5,6 +5,7 @@ A task board that keeps the record.
 [![Release](https://img.shields.io/github/v/release/Jduckworp/donebook?label=release)](https://github.com/Jduckworp/donebook/releases/latest)
 [![Docker pulls](https://img.shields.io/docker/pulls/jduckworp/donebook)](https://hub.docker.com/r/jduckworp/donebook)
 [![Image size](https://img.shields.io/docker/image-size/jduckworp/donebook/latest)](https://hub.docker.com/r/jduckworp/donebook)
+[![PyPI](https://img.shields.io/pypi/v/donebook)](https://pypi.org/project/donebook/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ![The Donebook board — a month of work, with everything already ticked off still on the board](docs/screenshot.png)
@@ -91,7 +92,19 @@ The database and the password both live on the `donebook-data` volume, so
 docker cp donebook:/data/donebook.db ./donebook-backup.db
 ```
 
-### Without Docker
+### From PyPI
+
+```bash
+pipx install donebook
+donebook --insecure-cookie
+```
+
+`pip install donebook` works too. The database and config land in **the
+directory you run it from** — `./data/donebook.db` and `./config.json` — so
+run it somewhere you mean to keep, or pass `--data-dir`. `donebook --help`
+lists the flags; `--insecure-cookie` is only needed until TLS is in front.
+
+### From a clone
 
 Requires Python 3.10+.
 
@@ -99,12 +112,12 @@ Requires Python 3.10+.
 git clone https://github.com/Jduckworp/donebook.git
 cd donebook
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-DONEBOOK_INSECURE_COOKIE=1 .venv/bin/python app.py
+.venv/bin/pip install -e .
+.venv/bin/donebook --insecure-cookie
 ```
 
-Same first-boot behaviour: the generated password is printed to the console
-and written to `config.json`.
+Same first-boot behaviour in every case: the generated password is printed to
+the console and written to `config.json`.
 
 ## Deploy
 

@@ -1,0 +1,137 @@
+# Cut a release with:  git tag v1.2.3 && git push origin v1.2.3
+#
+# Everything below keys off that tag. The version in donebook/__init__.py is
+# the single source of truth, and the first job refuses to go any further if
+# the tag disagrees with it — publishing a wheel whose version does not match
+# its tag is not something you can undo, because PyPI never lets a version be
+# reused.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tag matches the package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: check
+        run: |
+          set -euo pipefail
+          pkg=$(python -c "import re,pathlib; \
+            print(re.search(r'__version__ = \"([^\"]+)\"', \
+            pathlib.Path('donebook/__init__.py').read_text()).group(1))")
+          tag="${GITHUB_REF_NAME#v}"
+          echo "package=$pkg tag=$tag"
+          if [ "$pkg" != "$tag" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match donebook/__init__.py ($pkg)"
+            exit 1
+          fi
+          echo "version=$pkg" >> "$GITHUB_OUTPUT"
+
+  python:
+    name: Build and smoke-test the wheel
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --upgrade build
+      - run: python -m build
+      # Install the built wheel somewhere that is not the source tree, start
+      # it, and require a real 200 — the packaging mistake that matters here
+      # is templates or static files missing from the wheel, and only running
+      # the installed copy catches that.
+      - name: Smoke-test the installed wheel
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/smoke && cd /tmp/smoke
+          python -m venv .venv
+          .venv/bin/pip install --quiet "$GITHUB_WORKSPACE"/dist/*.whl
+          .venv/bin/donebook --version
+          .venv/bin/donebook --port 8765 --insecure-cookie & pid=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/healthz || true)
+            [ "$code" = "200" ] && break
+            sleep 1
+          done
+          for path in /healthz / /static/app.css /sw.js /manifest.webmanifest; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8765$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || { kill $pid; exit 1; }
+          done
+          kill $pid
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    name: Publish to PyPI
+    needs: python
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write          # trusted publishing — no API token to leak
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  docker:
+    name: Push the image
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # GHCR, via the built-in GITHUB_TOKEN
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Publishing the same digest to both registries means `latest` can never
+      # mean two different things depending on where someone pulled from.
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/donebook
+            ghcr.io/${{ github.repository_owner }}/donebook
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

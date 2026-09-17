@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "donebook"
+# Single source of truth: donebook/__init__.py. The release workflow
+# refuses to publish if the git tag disagrees with it.
+dynamic = ["version"]
+description = "A task board that keeps the record — export what you actually did this month"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Joseph Duckworth" }]
+keywords = ["tasks", "todo", "self-hosted", "productivity", "kanban", "time-tracking"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Office/Business :: Scheduling",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "flask>=3.1",
+    "gunicorn>=23.0; sys_platform != 'win32'",
+]
+
+[project.urls]
+Homepage = "https://github.com/Jduckworp/donebook"
+Source = "https://github.com/Jduckworp/donebook"
+Issues = "https://github.com/Jduckworp/donebook/issues"
+Changelog = "https://github.com/Jduckworp/donebook/releases"
+"Docker image" = "https://hub.docker.com/r/jduckworp/donebook"
+
+[project.scripts]
+donebook = "donebook.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "donebook.__version__" }
+
+[tool.setuptools]
+# app.py at the repository root is a shim for `gunicorn app:app`, not part of
+# the distribution — listing packages explicitly keeps it out of the wheel.
+packages = ["donebook"]
+
+[tool.setuptools.package-data]
+donebook = ["templates/*.html", "static/*", "static/icons/*"]
