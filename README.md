@@ -2,7 +2,7 @@
 
 A task board that keeps the record.
 
-[![Docker image](https://img.shields.io/docker/v/jduckworp/donebook?label=docker&sort=semver)](https://hub.docker.com/r/jduckworp/donebook)
+[![Release](https://img.shields.io/github/v/release/Jduckworp/donebook?label=release)](https://github.com/Jduckworp/donebook/releases/latest)
 [![Docker pulls](https://img.shields.io/docker/pulls/jduckworp/donebook)](https://hub.docker.com/r/jduckworp/donebook)
 [![Image size](https://img.shields.io/docker/image-size/jduckworp/donebook/latest)](https://hub.docker.com/r/jduckworp/donebook)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
