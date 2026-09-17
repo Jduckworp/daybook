@@ -154,6 +154,8 @@ minute, and the wait doubles with each further attempt up to an hour.
 | `DONEBOOK_DATA_DIR` | `./data` (`/data` in Docker) | Where `donebook.db` lives |
 | `DONEBOOK_CONFIG` | `./config.json` (`/data/config.json` in Docker) | Session key, salt, password hash |
 | `DONEBOOK_INSECURE_COOKIE` | unset | Set to `1` to allow the session cookie over plain HTTP |
+| `DONEBOOK_TRUSTED_PROXY` | unset | Set to `1` behind a reverse proxy, so sign-in limits are per client address rather than global |
+| `DONEBOOK_DEMO_PASSWORD` | unset | Run as a public demo: shows the password on the sign-in screen and banners the board |
 
 `config.json` is written mode 600 and must stay out of version control —
 it is in `.gitignore` already.
