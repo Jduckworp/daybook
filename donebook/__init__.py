@@ -5,5 +5,5 @@ effects (it reads the environment and opens the data directory), so it is not
 imported here — ``from donebook.app import app`` when you want it.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = ["__version__"]
