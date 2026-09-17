@@ -48,6 +48,13 @@ DATA.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA / "donebook.db"
 CONFIG_PATH = Path(os.environ.get("DONEBOOK_CONFIG") or RUNDIR / "config.json")
 
+# Demo mode. Set DONEBOOK_DEMO_PASSWORD to run a public sandbox: the sign-in
+# screen shows the password instead of asking people to guess it, and the
+# board carries a banner saying the data is shared and temporary. It changes
+# nothing about how authentication works — a demo still signs in properly,
+# which is the point, because visitors should see the real thing.
+DEMO_PASSWORD = os.environ.get("DONEBOOK_DEMO_PASSWORD") or ""
+
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 STAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$")
@@ -649,7 +656,11 @@ def asset_helper():
 
 @app.get("/")
 def index():
-    return render_template("index.html", signed_in=bool(session.get("in")))
+    return render_template(
+        "index.html",
+        signed_in=bool(session.get("in")),
+        demo_password=DEMO_PASSWORD,
+    )
 
 
 @app.get("/manifest.webmanifest")

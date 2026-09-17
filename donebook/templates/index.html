@@ -27,14 +27,28 @@
     <p class="gate-sub">A record of what you actually did.</p>
     <label class="field">
       <span>Password</span>
-      <input type="password" id="password" autocomplete="current-password" required>
+      <input type="password" id="password" autocomplete="current-password" required
+             {% if demo_password %}value="{{ demo_password }}"{% endif %}>
     </label>
+    {% if demo_password %}
+    <p class="gate-demo">
+      This is a public demo. The password is <code>{{ demo_password }}</code> and
+      it is already filled in — just open the board.
+    </p>
+    {% endif %}
     <button type="submit" class="btn btn-primary btn-block">Open the board</button>
     <p class="gate-error" id="gate-error" role="alert" hidden></p>
   </form>
 </div>
 
 <div id="app" class="app" hidden>
+  {% if demo_password %}
+  <p class="demo-bar">
+    Demo — everyone who opens this link shares one board, and it is wiped every
+    hour. Don't put anything real here.
+    <a href="https://github.com/Jduckworp/donebook" target="_blank" rel="noopener">Get your own copy</a>
+  </p>
+  {% endif %}
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">

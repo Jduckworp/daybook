@@ -1008,3 +1008,32 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+
+/* Demo mode — only rendered when DONEBOOK_DEMO_PASSWORD is set. */
+.gate-demo {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted, #667);
+  text-align: center;
+}
+.gate-demo code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 23, 75, 0.07);
+  font-size: 12.5px;
+}
+.demo-bar {
+  margin: 0;
+  padding: 9px 16px;
+  background: #00174B;
+  color: #cfd8ea;
+  font-size: 13px;
+  text-align: center;
+}
+.demo-bar a {
+  margin-left: 6px;
+  color: #fff;
+  text-decoration: underline;
+}
